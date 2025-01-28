@@ -1,0 +1,4 @@
+FROM prom/prometheus:v2.37.9
+USER root
+RUN mkdir -p /prometheus
+COPY ./config/prometheus.yml /etc/prometheus/prometheus.yml

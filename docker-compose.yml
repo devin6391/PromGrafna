@@ -1,34 +1,49 @@
 networks:
   monitoring:
     driver: bridge
+
 volumes:
   prometheus-data:
     driver: local
   grafana-data:
     driver: local
+
 services:
+  nginx:
+    image: vrdcoker.azurecr.io/nginx-custom:20250127121602
+    container_name: nginx
+    ports:
+      - '80:80'
+    depends_on:
+      - prometheus
+      - grafana
+    restart: unless-stopped
+
   prometheus:
-    image: prom/prometheus:v2.37.9
+    image: vrdcoker.azurecr.io/prometheus-custom:20250127121602
     user: root
     container_name: prometheus
     ports:
       - '9090:9090'
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=${BASE_URL}/prom'
     volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./data:/prometheus
+      - prometheus-data:/prometheus
     restart: unless-stopped
+
   grafana:
-    image: grafana/grafana-oss:latest
+    image: vrdcoker.azurecr.io/grafana-custom:20250127121602
     container_name: grafana
+    environment:
+      - GF_SERVER_ROOT_URL=${BASE_URL}/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     ports:
       - '3000:3000'
     volumes:
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - grafana-data:/var/lib/grafana
     restart: unless-stopped
-    #password: root123
+
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.0
     container_name: cadvisor
@@ -38,15 +53,17 @@ services:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
     devices:
       - /dev/kmsg
     privileged: true
     restart: unless-stopped
+
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
+    privileged: true
     ports:
       - '9100:9100'
     volumes:

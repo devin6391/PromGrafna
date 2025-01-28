@@ -1,0 +1,79 @@
+version: '3.8'
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+services:
+  nginx:
+    image: vrdcoker.azurecr.io/nginx-custom:20250127131252
+    container_name: nginx
+    ports:
+      - '80:80'
+    depends_on:
+      - prometheus
+      - grafana
+    restart: unless-stopped
+
+  prometheus:
+    image: vrdcoker.azurecr.io/prometheus-custom:20250127131252
+    user: root
+    container_name: prometheus
+    ports:
+      - '9090:9090'
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=https://prom-grafana-a7bsgfc5a0dfaect.eastus-01.azurewebsites.net/prom'
+    volumes:
+      - ${WEBAPP_STORAGE_HOME}/prometheus-data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: vrdcoker.azurecr.io/grafana-custom:20250127131252
+    container_name: grafana
+    environment:
+      - GF_SERVER_ROOT_URL=${BASE_URL}/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    ports:
+      - '3000:3000'
+    volumes:
+      - ${WEBAPP_STORAGE_HOME}/grafana-data:/var/lib/grafana
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: cadvisor
+    command:
+      - '-port=8098'
+    volumes:
+      - ${WEBAPP_STORAGE_HOME}/rootfs:/rootfs:ro
+      - ${WEBAPP_STORAGE_HOME}/var/run:/var/run:ro
+      - ${WEBAPP_STORAGE_HOME}/sys:/sys:ro
+      - ${WEBAPP_STORAGE_HOME}/var/lib/docker:/var/lib/docker:ro
+      - ${WEBAPP_STORAGE_HOME}/dev/disk:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    privileged: true
+    ports:
+      - '9100:9100'
+    volumes:
+      - ${WEBAPP_STORAGE_HOME}/proc:/host/proc:ro
+      - ${WEBAPP_STORAGE_HOME}/sys:/host/sys:ro
+      - ${WEBAPP_STORAGE_HOME}/rootfs:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
+    restart: unless-stopped

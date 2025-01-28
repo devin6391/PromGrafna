@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 10s
+  external_labels:
+    monitor: production-01
+scrape_configs:
+  - job_name: "prometheus"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["prometheus:9090"]
+  - job_name: "cadvisor"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["cadvisor:8098"]
+  - job_name: "node-exporter"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["node-exporter:9100"]
+  - job_name: "ATSBgService_dev"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["dev-atshub-bg-linux-usea-01.azurewebsites.net"]
+    metrics_path: "/metrics"
+    scheme: "https"
+  - job_name: "ATSBgService_prod"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["prod-atshub-bg-linux-usea-01.azurewebsites.net"]
+    metrics_path: "/metrics"
+    scheme: "https"
+  - job_name: "ContossoPizza"
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          ["monitoring-otel-cvh3fwgyguf4gfe5.eastus-01.azurewebsites.net"]
+    metrics_path: "/metrics"
+    scheme: "https"
